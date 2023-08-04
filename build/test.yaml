@@ -1,7 +1,0 @@
-# Ping.yaml
----
-- hosts: all_nodes
-  gather_facts: true
-  tasks:
-    - name: Ping all servers
-      action: ping

@@ -1,0 +1,11 @@
+---
+- name: restart kubelet
+  service:
+    name: kubelet
+    state: restarted
+    enabled: yes
+  become: true
+  become_user: root
+  become_method: sudo
+  tags: restart_kubelet
+  ignore_errors: yes

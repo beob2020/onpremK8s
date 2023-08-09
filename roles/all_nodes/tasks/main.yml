@@ -1,0 +1,18 @@
+---
+- name: Clean up all the nodes.
+  include_tasks: cleanup.yml
+
+
+- name: Install prepare nodes yaml
+  include_tasks: prepare-nodes.yml
+
+- name: Ensure kubelet is started and enabled at boot.
+  service:
+    name: kubelet
+    state: started
+    enabled: true
+
+- name: Check if Kubernetes has already been initialized.
+  stat:
+    path: /etc/kubernetes/admin.conf
+  register: kubernetes_init_stat

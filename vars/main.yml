@@ -1,7 +1,0 @@
----
-kubernetes_supported_node_type:
-    - control_plane
-    - worker
-    - master
-    - admin
-

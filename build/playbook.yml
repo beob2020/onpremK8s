@@ -1,0 +1,15 @@
+---
+- hosts: all_nodes
+  name: "Installs all the prerequisites for kubernetes installation"
+  roles:
+    - all_nodes
+
+- hosts: master
+  name: "Installs the kubernetes master nodes"
+  roles:
+    - master-nodes
+
+- hosts: workers
+  name: "Installs kubernetes  on worker nodes and joins them to the cluster"
+  roles:
+    - worker-nodes

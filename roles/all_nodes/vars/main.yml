@@ -1,0 +1,8 @@
+---
+# vars file for all_nodes
+procps_package: procps
+
+
+k8s_version: 1.27.4-00
+k8s_apt_key_url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+k8s_apt_repo: deb https://apt.kubernetes.io/ kubernetes-xenial main

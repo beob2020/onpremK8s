@@ -1,0 +1,10 @@
+---
+- name: Clean up previous old kubernetes features
+  shell: |
+    kubeadm reset -y
+    apt-get purge -y --allow-change-held-packages kubeadm kubectl kubelet kubernetes-cni kube*
+    rm -rf cluster_intialized.txt; rm -rf snap
+    sudo rm -rf /etc/kubernetes/; sudo rm -rf /var/lib/containerd;
+    sudo rm -rf ~/.kube/; sudo rm -rf /var/lib/etcd;
+    sudo rm -rf /var/lib/cni/; rm -rf /etc/cni; rm -rf /opt/cni
+

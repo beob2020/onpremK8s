@@ -1,10 +1,42 @@
 ---
-- name: Clean up previous old kubernetes features
-  shell: |
-    kubeadm reset -y
-    apt-get purge -y --allow-change-held-packages kubeadm kubectl kubelet kubernetes-cni kube*
-    rm -rf cluster_intialized.txt; rm -rf snap
-    sudo rm -rf /etc/kubernetes/; sudo rm -rf /var/lib/containerd;
-    sudo rm -rf ~/.kube/; sudo rm -rf /var/lib/etcd;
-    sudo rm -rf /var/lib/cni/; rm -rf /etc/cni; rm -rf /opt/cni
+- name: Clean up Kubernetes Setup
+  become: yes
+  shell: yes | kubeadm reset
+
+- name: Unhold Kubernetes packages
+  dpkg_selections:
+    name: "{{ item }}"
+    selection: install
+  loop:
+    - kubeadm
+    - kubectl
+    - kubelet
+  become: yes
+
+- name: Purge old Kubernetes packages
+  apt:
+    name:
+     - kubeadm
+     - kubectl
+     - kubelet
+     - kubernetes-cni
+    state: absent
+    purge: yes
+
+
+- name: Remove generated files and directories
+  file:
+    path: "{{ item }}"
+    state: absent
+  loop:
+    - cluster_intialized.txt
+    - snap
+    - /etc/kubernetes
+    - /var/lib/containerd
+    - /root/.kube
+    - /var/lib/etcd
+    - /var/lib/cni
+    - /etc/cni
+    - /opt/cni
+    - /var/run/calico
 

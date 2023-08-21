@@ -5,14 +5,12 @@
   roles:
     - all_nodes
 
-
 - name: "Install master nodes"
   hosts: master
   become: true
   tasks:
     - include_tasks: ../tasks/master_nodes_install.yml
       name: Include tasks from role master-nodes
-
 
 - name: "Join worker nodes to the cluster"
   hosts: workers

@@ -1,16 +1,15 @@
 ---
-- name: Generate join token
-  shell: kubeadm token create --print-join-command
-  register: kubeadm_join_cmd
-  delegate_to: "{{ groups['k8s-masters'][0] }}"
+- name: Retrieve the join command from master
+  become: true
+  slurp:
+    src: "/etc/kubernetes/kubeadm-join.command"
+  register: slurped_file
+  delegate_to: "{{ groups['master'][0] }}"
 
-- set_fact:
-    kubeadm_join: "{{ kubeadm_join_cmd.stdout }}"
+- name: Set kubeadm join fact
+  set_fact:
+    kubeadm_join: "{{ slurped_file['content'] | b64decode }}"
 
-- debug: var=kubeadm_join
-
-- name: Store join command
-  action: copy content="{{ kubeadm_join }}" dest="/etc/kubernetes/kubeadm-join.command"
-
-- name: Run kubeadm join
-  shell: "{{ kubeadm_join }} --ignore-preflight-errors=swap"
+- name: Run kubeadm join on worker nodes
+  become: true
+  shell: "{{ kubeadm_join }} --ignore-preflight-errors=swap --cri-socket unix:///var/run/cri-dockerd.sock"

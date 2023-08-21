@@ -11,7 +11,7 @@
 - name:  2) Allow 'admin' to have passwordless sudo
   ansible.builtin.lineinfile:
     dest: /etc/sudoers
-    line: 'admin ALL=(ALL) NOPASSWD: ALL'
+    line: 'admin ALL=(ALL:ALL) NOPASSWD: ALL'
     validate: 'visudo -cf %s'
 
 # Set Authorized Key taken from the host

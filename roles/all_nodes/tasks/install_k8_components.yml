@@ -1,5 +1,5 @@
 ---
-- name: Ensure /etc/apt/keyrings/ directory exists
+- name: 8)Ensure /etc/apt/keyrings/ directory exists
   ansible.builtin.file:
     path: /etc/apt/keyrings/
     state: directory
@@ -8,31 +8,31 @@
     mode: '0755'
   become: yes
 
-- name: 8)  Add Kubernetes APT key
+- name: 9)  Add Kubernetes APT key
   ansible.builtin.shell: |
      curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
   args:
     creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 
-- name: Add Kubernetes GPG key
+- name: 10) Add Kubernetes GPG key
   ansible.builtin.apt_key:
     url: "https://packages.cloud.google.com/apt/doc/apt-key.gpg"
     state: present
 
 
-- name: Add Kubernetes repository
+- name: 11) Add Kubernetes repository
   ansible.builtin.apt_repository:
     repo: "deb https://apt.kubernetes.io/ kubernetes-xenial main"
     state: present
 
 
-- name: 10) Update APT cache
+- name: 12) Update APT cache
   become: true
   ansible.builtin.apt:
     update_cache: yes
 
 
-- name: 11) Install Kubernetes components
+- name: 13) Install Kubernetes components
   become: true
   ansible.builtin.apt:
     name:
@@ -44,7 +44,7 @@
 
 
 
-- name: 12) Hold Kubernetes packages to prevent unintentional upgrade
+- name: 14) Hold Kubernetes packages to prevent unintentional upgrade
   become: true
   ansible.builtin.dpkg_selections:
     name: "{{ item }}"
@@ -56,7 +56,7 @@
 
 
 
-- name: 13) Turn off swap
+- name: 15) Turn off swap
   become: true
   ansible.builtin.command: "{{ item }}"
   with_items:
@@ -65,7 +65,7 @@
 
 
 
-- name: 14) Ensure required kernel modules are loaded
+- name: 16) Ensure required kernel modules are loaded
   become: true
   ansible.builtin.copy:
     content: |
@@ -78,7 +78,7 @@
 
 
  # Load necessary kernel modules
-- name: 15) Load necessary kernel modules
+- name: 17) Load necessary kernel modules
   become: true
   modprobe:
     name: "{{ item }}"
@@ -89,7 +89,7 @@
 
 
  # Ensure IPTables tooling does not use the nftables backend
-- name:  16) Ensure sysctl configuration is set for Kubernetes
+- name:  18) Ensure sysctl configuration is set for Kubernetes
   ansible.builtin.copy:
     dest: /etc/sysctl.d/kubernetes.conf
     content: |
@@ -99,18 +99,12 @@
     mode: '0644'
 
 
-- name: check Kubelet args in Kubelet config
+- name: 19) Check Kubelet args in Kubelet config
   shell: grep "^Environment=\"KUBELET_EXTRA_ARGS=" /etc/systemd/system/kubelet.service.d/10-kubeadm.conf || true
   register: check_args
 
-#- name: add runtime args in Kubelet config
-#  lineinfile:
-#    dest: "/etc/systemd/system/kubelet.service.d/10-kubeadm.conf"
-#    line: "Environment=\"KUBELET_EXTRA_ARGS= --container-runtime-endpoint=unix:///var/run/cri-dockerd.sock\""
-#    insertafter: '\[Service\]'
-#  when: check_args.stdout == ""
 
-- name: 17) Restarting the System without a Reboot  - sysctl
+- name: 20) Restarting the System without a Reboot  - sysctl
   become: true
   ansible.builtin.shell: |
     sysctl --system

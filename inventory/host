@@ -17,4 +17,4 @@ workers
 
 # local host
 [local1]
-localhost ansible_host=local
+localhost ansible_connection=local

@@ -1,5 +1,5 @@
 ---
-- name: Create directories
+- name: 21) Create directories
   ansible.builtin.file:
     path: "{{ item }}"
     state: directory
@@ -11,28 +11,28 @@
     - /tmp2
 
 
-- name: Ensure /etc/apt/keyrings directory exists
+- name: 22) Ensure /etc/apt/keyrings directory exists
   ansible.builtin.file:
     path: /etc/apt/keyrings
     state: directory
     mode: '0755'
 
-- name: Add Docker GPG key
+- name: 23) Add Docker GPG key
   ansible.builtin.shell: curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
   args:
     creates: /etc/apt/keyrings/docker.gpg
 
-- name: Set correct permissions on Docker GPG key
+- name: 24) Set correct permissions on Docker GPG key
   ansible.builtin.file:
     path: /etc/apt/keyrings/docker.gpg
     mode: '0644'
 
-- name: Add Docker repository
+- name: 25) Add Docker repository
   ansible.builtin.shell:  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list
   args:
     creates: /etc/apt/sources.list.d/docker.list
 
-- name: Install Docker
+- name: 26) Install Docker
   ansible.builtin.apt:
     name:
       - docker-ce
@@ -40,7 +40,7 @@
     update_cache: yes
     state: present
 
-- name: 21) Start and enable Docker Service
+- name: 27) Start and enable Docker Service
   ansible.builtin.systemd:
     name: docker
     state: started
@@ -49,18 +49,18 @@
 
 
 
-- name: 22) Download cri-dockerd from GitHub using a specific version
+- name: 28) Download cri-dockerd from GitHub using a specific version
   ansible.builtin.get_url:
     url: "https://github.com/Mirantis/cri-dockerd/releases/download/v{{ cri_docker_version }}/cri-dockerd_{{ cri_docker_version }}.3-0.debian-bullseye_amd64.deb"
     dest: "/tmp1/cri-dockerd-{{ cri_docker_version }}.3-0.debian-bullseye_amd64.deb"
 
 
-- name: 23) Extract the deb file
+- name: 29) Extract the deb file
   ansible.builtin.command:
     cmd: dpkg-deb -x /tmp1/cri-dockerd-{{ cri_docker_version }}.3-0.debian-bullseye_amd64.deb /tmp2
 
 
-- name: 25) Copy cri-dockerd to /usr/bin
+- name: 30) Copy cri-dockerd to /usr/bin
   become: true
   ansible.builtin.copy:
     src: /tmp2/usr/bin/cri-dockerd
@@ -71,7 +71,7 @@
     remote_src: yes
 
 
-- name: 26) Create /etc/systemd/system/cri-docker.service
+- name: 31) Create /etc/systemd/system/cri-docker.service
   become: true
   ansible.builtin.copy:
     src: /tmp2/lib/systemd/system/cri-docker.service
@@ -82,7 +82,7 @@
     remote_src: yes
 
 
-- name: 27) Create /etc/systemd/system/cri-docker.socket
+- name: 32) Create /etc/systemd/system/cri-docker.socket
   become: true
   ansible.builtin.copy:
     src: /tmp2/lib/systemd/system/cri-docker.socket
@@ -93,20 +93,20 @@
     remote_src: yes
 
 
-- name: Reload systemd
+- name: 33) Reload systemd
   become: true
   ansible.builtin.systemd:
     daemon_reload: yes
 
 
-- name: Enable cri-docker.service
+- name: 34) Enable cri-docker.service
   become: true
   ansible.builtin.systemd:
     name: cri-docker.service
     enabled: yes
 
 
-- name: Enable and start cri-docker.socket
+- name: 35) Enable and start cri-docker.socket
   become: true
   ansible.builtin.systemd:
     name: cri-docker.socket
@@ -114,7 +114,7 @@
     state: started
 
 
-- name: Create /etc/sysctl.d/99-kubernetes-cri.conf
+- name: 36) Create /etc/sysctl.d/99-kubernetes-cri.conf
   become: true
   ansible.builtin.copy:
     dest: /etc/sysctl.d/99-kubernetes-cri.conf
@@ -126,7 +126,7 @@
     group: root
     mode: '0644'
 
-- name: Reload sysctl from all system configuration files
+- name: 37) Reload sysctl from all system configuration files
   ansible.builtin.command:
     cmd: sysctl --system
 

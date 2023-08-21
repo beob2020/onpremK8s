@@ -2,17 +2,17 @@
 - name: Clean up all the nodes.
   include_tasks: cleanup.yml
 
-
 - name: Install prepare nodes yaml
   include_tasks: prepare-nodes.yml
 
-- name: Ensure kubelet is started and enabled at boot.
-  service:
-    name: kubelet
-    state: started
-    enabled: true
+- name: Install kubeadm, kubelet, kubectl
+  include_tasks: install_k8_components.yml
 
-- name: Check if Kubernetes has already been initialized.
-  stat:
-    path: /etc/kubernetes/admin.conf
-  register: kubernetes_init_stat
+- name: Install Docker on all nodes
+  include_tasks: docker_installation.yml
+
+- name: Pull kubeadm images
+  ansible.builtin.shell: |
+       kubeadm config images pull --cri-socket unix:///var/run/cri-dockerd.sock --kubernetes-version v1.28.0
+
+

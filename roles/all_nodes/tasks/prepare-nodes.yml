@@ -1,152 +1,61 @@
 ---
 # Create admin User
-- name: Create a 'default' user
-  user:
+- name:  1) Create a 'default' user
+  ansible.builtin.user:
     name: admin
-    groups: sudo
-    append: yes
     state: present
     createhome: yes
     shell: /bin/bash
 
 # Enable User to have passwordless sudo
-- name: Allow 'admin' to have passwordless sudo
-  lineinfile:
+- name:  2) Allow 'admin' to have passwordless sudo
+  ansible.builtin.lineinfile:
     dest: /etc/sudoers
     line: 'admin ALL=(ALL) NOPASSWD: ALL'
     validate: 'visudo -cf %s'
 
-
 # Set Authorized Key taken from the host
-- name: Set authorized key took from the host
+- name: 3) Set authorized key took from the host
   authorized_key:
     user: admin
     key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
 
+# 4) Add 'admin' user to sudo group
+- name: 4) Add 'admin' user to sudo group
+  ansible.builtin.user:
+    name: admin
+    groups: sudo
+    append: yes
+
 
 # Install Aptitude using apt
-- name: Install aptitude using apt
-  apt:
+- name: 5) Install aptitude using apt module
+  ansible.builtin.apt:
     name: aptitude
     state: latest
     update_cache: yes
     force_apt_get: yes
 
-
 # Ensuer APT is using HTTPS
-- name: Ensure APT is using HTTPS
-  apt:
+- name: 6) Ensure APT is using HTTPS
+  ansible.builtin.apt:
     name:
       - apt-transport-https
       - ca-certificates
+      - python3-pip
+      - python3-setuptools
       - curl
+      - golang-go
+      - wget
+      - lsb-release
+      - make
+      - git
       - gnupg2
       - software-properties-common
     state: present
-
-# Install Docker
-- name: Install Docker
-  apt:
-    name:
-      - docker-ce
-      - docker-ce-cli
-      - containerd.io
-    state: present
     update_cache: yes
 
-- name: Start and Enable Docker Service
-  service:
-    name: docker
-    state: started
-    enabled: yes
-
-- name: Configure systemd cgroup Driver
-  copy:
-    src: ~/onpremK8s/roles/all_nodes/tasks/config.toml
-    dest: /etc/containerd/
-    owner: admin
-
-
-- name: Restart containerd
-  systemd:
-    name: containerd
-    state: restarted
-
-
-- name: Add Kubenetes APT key
-  apt_key:
-    url: "{{ k8s_apt_key_url }}"
-    state: present
-
-- name: Add Kubernetes APT repository
-  apt_repository:
-    repo: "{{ k8s_apt_repo }}"
-    state: present
-
-
-- name: Install Kubernetes components
-  apt:
-    name:
-      - kubelet={{ k8s_version }}
-      - kubeadm={{ k8s_version }}
-      - kubectl={{ k8s_version }}
-    state: present
-    update_cache: yes
-
-- name: Hold Kubernetes packages to prevent unintentional upgrades
-  dpkg_selections:
-    name: "{{ item }}"
-    selection: hold
-  loop:
-    - kubelet
-    - kubeadm
-    - kubectl
-
-
-- name: Disable swap
-  command: swapoff -a
-  when: ansible_swaptotal_mb > 0
-
-- name: Comment out swap entry from fstab
-  lineinfile:
-     path: /etc/fstab
-     regexp: '^[^#]+\s+\bnone\s+\bswap\s+\b'
-     line: '#\1'
-  when: ansible_swaptotal_mb > 0
-
-- name: Load necessary kernel modules for Kubernetes networking
-  modprobe:
-    name: "{{ item }}"
-    state: present
-  loop:
-    - overlay
-    - br_netfilter
-
-- name: Ensure necessary kernel modules are loaded at boot
-  lineinfile:
-    path: "/etc/modules"
-    line: "{{ item }}"
-    state: present
-  loop:
-    - overlay
-    - br_netfilter
-
-- name: Apply sysctl settings for Kubernetes
-  sysctl:
-    name: "{{ item.name }}"
-    value: "{{ item.value }}"
-    state: present
-    reload: yes
-  loop:
-    - { name: 'net.bridge.bridge-nf-call-iptables', value: '1' }
-    - { name: 'net.ipv4.ip_forward', value: '1' }
-    - { name: 'net.bridge.bridge-nf-call-ip6tables', value: '1' }
-
-- name: Restart kubelet
-  service:
-    name: "{{ item }}"
-    state: started
-    enabled: yes
-  loop:
-    - docker
-    - kubelet
+ # Reload sysctl
+- name: 7) Reload sysctl
+  become: true
+  ansible.builtin.command: sysctl --system

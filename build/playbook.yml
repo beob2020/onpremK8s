@@ -1,15 +1,24 @@
 ---
 - hosts: all_nodes
+  become: true
   name: "Installs all the prerequisites for kubernetes installation"
   roles:
     - all_nodes
 
-- hosts: master
-  name: "Installs the kubernetes master nodes"
-  roles:
-    - master-nodes
 
-- hosts: workers
-  name: "Installs kubernetes  on worker nodes and joins them to the cluster"
-  roles:
-    - worker-nodes
+- name: "Install master nodes"
+  hosts: master
+  become: true
+  tasks:
+    - include_tasks: ../tasks/master_nodes_install.yml
+      name: Include tasks from role master-nodes
+
+
+- name: "Join worker nodes to the cluster"
+  hosts: workers
+  become: true
+  tasks:
+    - include_tasks: ../tasks/worker_nodes_install.yml
+      name: Include tasks from role master-nodes
+
+

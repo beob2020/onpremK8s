@@ -1,10 +1,6 @@
 ---
-- name: Clean up Kubernetes Setup
-  become: yes
-  shell: yes | kubeadm reset
-
 - name: Unhold Kubernetes packages
-  dpkg_selections:
+  ansible.builtin.dpkg_selections:
     name: "{{ item }}"
     selection: install
   loop:
@@ -13,30 +9,79 @@
     - kubelet
   become: yes
 
+
+- name: Clean up Kubernetes Setup
+  become: yes
+  ansible.builtin.shell: yes | kubeadm reset --cri-socket=unix:///var/run/cri-dockerd.sock
+  ignore_errors: yes
+
+
 - name: Purge old Kubernetes packages
-  apt:
+  ansible.builtin.apt:
     name:
+     - kubelet
      - kubeadm
      - kubectl
-     - kubelet
-     - kubernetes-cni
     state: absent
     purge: yes
 
+- name: Purge all docker packages
+  ansible.builtin.apt:
+    name:
+     - docker-ce
+     - docker-ce-cli
+     - containerd
+    state: absent
+    purge: yes
+    autoremove: yes
 
 - name: Remove generated files and directories
-  file:
+  become: true
+  ansible.builtin.file:
     path: "{{ item }}"
     state: absent
   loop:
-    - cluster_intialized.txt
+    - cluster_initialized.txt
     - snap
     - /etc/kubernetes
+    - /etc/containerd
+    - /etc/cni/net.d
     - /var/lib/containerd
-    - /root/.kube
+    - /var/lib/docker
     - /var/lib/etcd
     - /var/lib/cni
-    - /etc/cni
+    - /var/run/docker.sock
+    - /var/run/docker.sock
+    - /var/run/containerd
+    - /run/containerd
+    - /etc/sysctl.d/kubernetes.conf
+    - /etc/docker
+    - /usr/local/bin/cri-dockerd
+    - /usr/bin/cri-dockerd
+    - /usr/local/bin/cri-docker
+    - /etc/systemd/system/kubelet.service.d
+    - /etc/systemd/system/cri-docker.service
+    - /etc/systemd/system/cri-docker.socket
+    - /etc/systemd/system/containerd.service.d
+    - /usr/lib/systemd/system/cri-docker.service
+    - /etc/systemd/system/multi-user.target.wants/cri-docker.service
+    - /root/.kube
     - /opt/cni
-    - /var/run/calico
+    - /usr/local/lib/systemd/system/containerd.service
+    - /etc/apparmor.d/docker
+    - /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    - /etc/apt/sources.list.d/kubernetes.list
+    - /root/cri-dockerd
+  ignore_errors: yes
+
+- name: Do apt update
+  become: yes
+  ansible.builtin.apt:
+    update_cache: yes
+
+
+- name: Upgrade all packages to the latest version
+  ansible.builtin.apt:
+    upgrade: yes
+
 

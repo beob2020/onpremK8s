@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-22.04
 
     steps:
-      - name: Check out the codebase
+      - name: Checkqout the repository
         uses: actions/checkout@v3
 
       - name:  Set up Python
@@ -32,5 +32,8 @@ jobs:
         run: pip3 install yamllint
 
       - name: Lint code.
-        run: |
-           yamllint .
+        uses: ansible/ansible-lint-action@master
+        with:
+          targets: ""
+          override-deps: |
+            ansible-lint=4.2.0

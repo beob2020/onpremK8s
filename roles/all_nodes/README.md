@@ -1,12 +1,17 @@
-Role Name
+Role All_Nodes
 =========
+This role is used to configure all nodes in the cluster. It is used to install the following packages:
+- python3
+- python3-pip
+- python3-devel
+- python3-setuptools
 
-A brief description of the role goes here.
 
 Requirements
 ------------
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here.
+For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
 
 Role Variables
 --------------

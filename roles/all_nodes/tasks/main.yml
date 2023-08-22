@@ -14,5 +14,3 @@
 - name: Pull kubeadm images
   ansible.builtin.shell: |
        kubeadm config images pull --cri-socket unix:///var/run/cri-dockerd.sock --kubernetes-version v1.28.0
-
-

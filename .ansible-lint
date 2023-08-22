@@ -1,6 +1,7 @@
 offline: true
 
 skip_list:
+  - '301'
   - args[module]
   - jinja[spacing]
   - name[casing]

@@ -7,14 +7,19 @@
     - kubeadm
     - kubectl
     - kubelet
-  become: yes
+  become: true
+  register: result
+  failed_when: false
 
+- name: check result
+  ansible.builtin.debug:
+    var: result.changed
 
 - name: Clean up Kubernetes Setup
-  become: yes
-  ansible.builtin.shell: yes | kubeadm reset --cri-socket=unix:///var/run/cri-dockerd.sock
-  ignore_errors: yes
-
+  become: true
+  ansible.builtin.shell: |
+    set -o pipefail && kubeadm reset --force --cri-socket=unix:///var/run/cri-dockerd.sock
+  failed_when: false
 
 - name: Purge old Kubernetes packages
   ansible.builtin.apt:
@@ -23,7 +28,7 @@
      - kubeadm
      - kubectl
     state: absent
-    purge: yes
+    purge: true
 
 - name: Purge all docker packages
   ansible.builtin.apt:
@@ -32,8 +37,8 @@
      - docker-ce-cli
      - containerd
     state: absent
-    purge: yes
-    autoremove: yes
+    purge: true
+    autoremove: true
 
 - name: Remove generated files and directories
   become: true
@@ -67,21 +72,39 @@
     - /etc/systemd/system/multi-user.target.wants/cri-docker.service
     - /root/.kube
     - /opt/cni
+    - /var/lib/cni/
+    - /var/lib/cni/*
+    - /var/etc/cni/
+    - /etc/cni/net.d/
     - /usr/local/lib/systemd/system/containerd.service
     - /etc/apparmor.d/docker
     - /etc/apt/keyrings/kubernetes-apt-keyring.gpg
     - /etc/apt/sources.list.d/kubernetes.list
     - /root/cri-dockerd
-  ignore_errors: yes
+    - /etc/apt/keyrings/kubernetes-apt-keyring.gpg
+    - /etc/apt/sources.list.d/apt_kubernetes_io.list
+  failed_when: false
+
+- name: Bring cni0 interface down
+  become: true
+  ansible.builtin.command: ip link delete cni0
+  failed_when: false  # Use this if you want to continue even if an error occurs
+
+- name: Bring flannel.1 interface down
+  become: true
+  ansible.builtin.command: ip link delete flannel.1
+  failed_when: false
+
+- name: Bring docker0 interface down
+  become: true
+  ansible.builtin.command: ip link delete docker0
+  failed_when: false
 
 - name: Do apt update
-  become: yes
+  become: true
   ansible.builtin.apt:
-    update_cache: yes
-
+    update_cache: true
 
 - name: Upgrade all packages to the latest version
   ansible.builtin.apt:
-    upgrade: yes
-
-
+    upgrade: true

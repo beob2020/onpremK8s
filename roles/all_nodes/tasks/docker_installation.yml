@@ -10,7 +10,6 @@
     - /tmp1
     - /tmp2
 
-
 - name: 22) Ensure /etc/apt/keyrings directory exists
   ansible.builtin.file:
     path: /etc/apt/keyrings
@@ -18,9 +17,12 @@
     mode: '0755'
 
 - name: 23) Add Docker GPG key
-  ansible.builtin.shell: curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+  ansible.builtin.shell:  |
+     set -o pipefail &&
+     curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
   args:
     creates: /etc/apt/keyrings/docker.gpg
+  become: true
 
 - name: 24) Set correct permissions on Docker GPG key
   ansible.builtin.file:
@@ -28,7 +30,7 @@
     mode: '0644'
 
 - name: 25) Add Docker repository
-  ansible.builtin.shell:  echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list
+  ansible.builtin.shell: echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian  $(. /etc/os-release && echo "$VERSION_CODENAME") stable" > /etc/apt/sources.list.d/docker.list
   args:
     creates: /etc/apt/sources.list.d/docker.list
 
@@ -37,30 +39,69 @@
     name:
       - docker-ce
       - docker-ce-cli
-    update_cache: yes
+    update_cache: true
     state: present
 
-- name: 27) Start and enable Docker Service
+- name: 27) Ensure docker systemd directory exists
+  ansible.builtin.file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+    mode: '0755'
+
+- name: 27) Ensure docker daemon directory exists
+  ansible.builtin.file:
+    path: /etc/docker/
+    state: directory
+    mode: '0755'
+
+- name: 28) Create docker daemon.json file
+  ansible.builtin.copy:
+    dest: /etc/docker/daemon.json
+    content: |
+          {
+           "exec-opts": ["native.cgroupdriver=systemd"],
+           "log-driver": "json-file",
+           "log-opts": {
+            "max-size": "100m"
+              },
+           "storage-driver": "overlay2"
+            }
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: 28) Creating docker.conf file
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/docker.service.d/docker.conf
+    content: |
+      [Service]
+      ExecStart=
+      ExecStart=/usr/bin/dockerd
+    owner: root
+    group: root
+    mode: '0644'
+
+- name: 29) Start and enable Docker Service
+  become: true
   ansible.builtin.systemd:
     name: docker
     state: started
-    enabled: yes
-    daemon_reload: yes
+    enabled: true
+    daemon_reload: true
 
 
-
-- name: 28) Download cri-dockerd from GitHub using a specific version
+- name: 30) Download cri-dockerd from GitHub using a specific version
+  become: true
   ansible.builtin.get_url:
     url: "https://github.com/Mirantis/cri-dockerd/releases/download/v{{ cri_docker_version }}/cri-dockerd_{{ cri_docker_version }}.3-0.debian-bullseye_amd64.deb"
     dest: "/tmp1/cri-dockerd-{{ cri_docker_version }}.3-0.debian-bullseye_amd64.deb"
 
 
-- name: 29) Extract the deb file
+- name: 31) Extract the deb file
   ansible.builtin.command:
     cmd: dpkg-deb -x /tmp1/cri-dockerd-{{ cri_docker_version }}.3-0.debian-bullseye_amd64.deb /tmp2
 
-
-- name: 30) Copy cri-dockerd to /usr/bin
+- name: 32) Copy cri-dockerd to /usr/bin
   become: true
   ansible.builtin.copy:
     src: /tmp2/usr/bin/cri-dockerd
@@ -68,10 +109,9 @@
     owner: root
     group: root
     mode: '0755'
-    remote_src: yes
+    remote_src: true
 
-
-- name: 31) Create /etc/systemd/system/cri-docker.service
+- name: 33) Create /etc/systemd/system/cri-docker.service
   become: true
   ansible.builtin.copy:
     src: /tmp2/lib/systemd/system/cri-docker.service
@@ -79,10 +119,9 @@
     owner: root
     group: root
     mode: '0644'
-    remote_src: yes
+    remote_src: true
 
-
-- name: 32) Create /etc/systemd/system/cri-docker.socket
+- name: 34) Create /etc/systemd/system/cri-docker.socket
   become: true
   ansible.builtin.copy:
     src: /tmp2/lib/systemd/system/cri-docker.socket
@@ -90,31 +129,29 @@
     owner: root
     group: root
     mode: '0644'
-    remote_src: yes
+    remote_src: true
 
-
-- name: 33) Reload systemd
+- name: 35) Reload systemd
   become: true
   ansible.builtin.systemd:
-    daemon_reload: yes
+    daemon_reload: true
 
 
-- name: 34) Enable cri-docker.service
+- name: 36) Enable cri-docker.service
   become: true
   ansible.builtin.systemd:
     name: cri-docker.service
-    enabled: yes
+    enabled: true
 
 
-- name: 35) Enable and start cri-docker.socket
+- name: 37) Enable and start cri-docker.socket
   become: true
   ansible.builtin.systemd:
     name: cri-docker.socket
-    enabled: yes
+    enabled: true
     state: started
 
-
-- name: 36) Create /etc/sysctl.d/99-kubernetes-cri.conf
+- name: 38) Create /etc/sysctl.d/99-kubernetes-cri.conf
   become: true
   ansible.builtin.copy:
     dest: /etc/sysctl.d/99-kubernetes-cri.conf
@@ -126,7 +163,6 @@
     group: root
     mode: '0644'
 
-- name: 37) Reload sysctl from all system configuration files
+- name: 39) Reload sysctl from all system configuration files
   ansible.builtin.command:
     cmd: sysctl --system
-

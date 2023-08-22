@@ -1,14 +1,14 @@
 ---
 # Create admin User
-- name:  1) Create a 'default' user
+- name: 1) Create a 'default' user
   ansible.builtin.user:
     name: admin
     state: present
-    createhome: yes
+    createhome: true
     shell: /bin/bash
 
 # Enable User to have passwordless sudo
-- name:  2) Allow 'admin' to have passwordless sudo
+- name: 2) Allow 'admin' to have passwordless sudo
   ansible.builtin.lineinfile:
     dest: /etc/sudoers
     line: 'admin ALL=(ALL:ALL) NOPASSWD: ALL'
@@ -25,16 +25,15 @@
   ansible.builtin.user:
     name: admin
     groups: sudo
-    append: yes
-
+    append: true
 
 # Install Aptitude using apt
 - name: 5) Install aptitude using apt module
   ansible.builtin.apt:
     name: aptitude
-    state: latest
-    update_cache: yes
-    force_apt_get: yes
+    state: present
+    update_cache: true
+    force_apt_get: true
 
 # Ensuer APT is using HTTPS
 - name: 6) Ensure APT is using HTTPS
@@ -53,7 +52,7 @@
       - gnupg2
       - software-properties-common
     state: present
-    update_cache: yes
+    update_cache: true
 
  # Reload sysctl
 - name: 7) Reload sysctl

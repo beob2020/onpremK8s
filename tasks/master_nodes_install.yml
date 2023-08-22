@@ -2,7 +2,7 @@
 - name: 41) Initializing Kubernetes cluster
   become: yes
   ansible.builtin.shell: |
-     kubeadm init --pod-network-cidr=10.244.0.0/16  --upload-certs --kubernetes-version=v1.28.0  --control-plane-endpoint=167.235.50.166 --cri-socket unix:///var/run/cri-dockerd.sock >> cluster_initialized.txt
+     kubeadm init --pod-network-cidr=192.168.0.0/16  --upload-certs --kubernetes-version=v1.28.0 --control-plane-endpoint=167.235.50.166 --cri-socket unix:///var/run/cri-dockerd.sock >> cluster_initialized.txt
   args:
     executable: /bin/bash
     chdir: "{{ ansible_env.HOME }}"
@@ -48,20 +48,10 @@
     state: present
     create: yes
 
-- name: Read kubeconfig file
-  slurp:
-    src: /etc/kubernetes/admin.conf
-  register: kubeconfig_content
 
-- name: Print kubeconfig file content
-  debug:
-    msg: "{{ kubeconfig_content['content'] | b64decode }}"
-
-
-
-- name: 45) Install flannel pod network
+- name: 45) Install calico network plugin
   become: true
-  ansible.builtin.shell: kubectl apply -f https://github.com/flannel-io/flannel/releases/latest/download/kube-flannel.yml
+  ansible.builtin.command: kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/calico.yaml
 
 
 - name: 46) Get the token for joining the worker nodes
@@ -86,10 +76,12 @@
   register: kubeadm_join_cmd
   delegate_to: "{{ groups['master'][0] }}"
 
-- set_fact:
+- name: 49) Store join command in a variable
+  set_fact:
     kubeadm_join: "{{ kubeadm_join_cmd.stdout }}"
 
-- debug: var=kubeadm_join
+- name: 49b) Print join command
+  ansible.builtin.debug.debug: var=kubeadm_join
 
 - name: 50) Store join command on the master for future use
   action: copy content="{{ kubeadm_join }}" dest="/etc/kubernetes/kubeadm-join.command"

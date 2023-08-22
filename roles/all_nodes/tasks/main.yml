@@ -1,16 +1,23 @@
 ---
 - name: Clean up all the nodes.
-  include_tasks: cleanup.yml
+  ansible.builtin.include_tasks: cleanup.yml
 
 - name: Install prepare nodes yaml
-  include_tasks: prepare-nodes.yml
+  ansible.builtin.include_tasks: prepare-nodes.yml
 
 - name: Install kubeadm, kubelet, kubectl
-  include_tasks: install_k8_components.yml
+  ansible.builtin.include_tasks: install_k8_components.yml
 
 - name: Install Docker on all nodes
-  include_tasks: docker_installation.yml
+  ansible.builtin.include_tasks: docker_installation.yml
 
 - name: Pull kubeadm images
   ansible.builtin.shell: |
        kubeadm config images pull --cri-socket unix:///var/run/cri-dockerd.sock --kubernetes-version v1.28.0
+
+- name: Restart Kubelet
+  ansible.builtin.service:
+    name: kubelet
+    state: restarted
+    enabled: true
+  become: true

@@ -1,15 +1,15 @@
 ---
 - name: Retrieve the join command from master
   become: true
-  slurp:
+  ansible.builtin.slurp:
     src: "/etc/kubernetes/kubeadm-join.command"
   register: slurped_file
   delegate_to: "{{ groups['master'][0] }}"
 
 - name: Set kubeadm join fact
-  set_fact:
+  ansible.builtin.set_fact:
     kubeadm_join: "{{ slurped_file['content'] | b64decode }}"
 
 - name: Run kubeadm join on worker nodes
   become: true
-  shell: "{{ kubeadm_join }} --ignore-preflight-errors=swap --cri-socket unix:///var/run/cri-dockerd.sock"
+  ansible.builtin.command: "{{ kubeadm_join }} --ignore-preflight-errors=swap --cri-socket unix:///var/run/cri-dockerd.sock"

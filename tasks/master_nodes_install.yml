@@ -1,17 +1,16 @@
 ---
+#Do not forget to delete the cluster_initialized.txt file in the home directory of the user
 - name: 41) Initializing Kubernetes cluster
-  become: yes
+  become: on
   ansible.builtin.shell: |
-     kubeadm init --pod-network-cidr=192.168.0.0/16  --upload-certs --kubernetes-version=v1.28.0 --control-plane-endpoint=167.235.50.166 --cri-socket unix:///var/run/cri-dockerd.sock >> cluster_initialized.txt
+    kubeadm init --pod-network-cidr=192.168.0.0/16 --upload-certs --kubernetes-version=v1.28.0 --control-plane-endpoint=167.235.159.74 --image-repository registry.k8s.io --cri-socket unix:///var/run/cri-dockerd.sock --v=5 >> cluster_initialized.txt
   args:
-    executable: /bin/bash
     chdir: "{{ ansible_env.HOME }}"
     creates: cluster_initialized.txt
   register: kubeadm_result
   failed_when:
     - "'error' in kubeadm_result.stderr|lower"
     - "kubeadm_result.rc != 0"
-
 
 - name: 42) Create .kube directory in /root
   become: true
@@ -20,16 +19,14 @@
     state: directory
     mode: '0755'
 
-
 - name: 42b) Copy Kubernetes admin config to user's kubeconfig
-  become: yes
+  become: true
   ansible.builtin.copy:
     src: /etc/kubernetes/admin.conf
     dest: "{{ ansible_env.HOME }}/.kube/config"
     owner: admin
     mode: '0644'
     remote_src: true
-
 
 - name: 43) Set owner of kube config
   become: true
@@ -39,49 +36,74 @@
     group: admin
     mode: '0600'
 
-
 - name: 44) Set KUBECONFIG environment variable
   become: true
   ansible.builtin.lineinfile:
     path: "{{ ansible_env.HOME }}/.bashrc"
     line: export KUBECONFIG=/etc/kubernetes/admin.conf
     state: present
-    create: yes
+    create: true
+    mode: '0644'
 
-
-- name: 45) Install calico network plugin
+- name: 45)Install calico network plugin
   become: true
   ansible.builtin.command: kubectl apply -f https://raw.githubusercontent.com/projectcalico/calico/v3.26.1/manifests/calico.yaml
 
-
-- name: 46) Get the token for joining the worker nodes
+- name: 46)Get the token for joining the worker nodes
   become: true
-  ansible.builtin.shell: kubeadm token create --print-join-command
+  ansible.builtin.command: kubeadm token create --print-join-command
   register: kubernetes_join_command
   changed_when: false
 
-- debug:
-    var: join_command
+#This steps requires you add ansible_user to your /etc/sudoers file,
+#ansible_user ALL=(ALL) NOPASSWD:ALL which allows the folder to be created on the local machine
+- name: 46b)Ensure directory exists on local machine
+  ansible.builtin.file:
+    path: /tmp/k8s-cluster-setup/
+    state: directory
+    mode: '0750'
+  delegate_to: localhost
+
+- name: 46c) copy the join command to the local machine
+  ansible.builtin.copy:
+    content: "{{ kubernetes_join_command.stdout }}"
+    dest: "/tmp/k8s-cluster-setup/join_command"
+    mode: '0750'
+  delegate_to: localhost
+  when: kubernetes_join_command is defined and kubernetes_join_command.stdout is defined
+
+- name: 42d) Copy Kubernetes admin config to local machine
+  become: true
+  ansible.builtin.copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "/tmp/k8s-cluster-setup/config"
+    owner: admin
+    mode: '0644'
+    remote_src: true
 
 - name: 47) Save the join command on local machine
-  copy:
+  ansible.builtin.copy:
     content: "{{ join_command.stdout }}"
     dest: "/tmp/k8s-cluster-setup/join_command"
+    mode: '0600'
   delegate_to: localhost
   when: join_command is defined and join_command.stdout is defined
 
-
 - name: 48c) Generate join token for other master nodes (if multi-master)
-  shell: kubeadm token create --print-join-command
+  ansible.builtin.command: kubeadm token create --print-join-command
   register: kubeadm_join_cmd
   delegate_to: "{{ groups['master'][0] }}"
 
 - name: 49) Store join command in a variable
-  set_fact:
+  ansible.builtin.set_fact:
     kubeadm_join: "{{ kubeadm_join_cmd.stdout }}"
 
 - name: 49b) Print join command
-  ansible.builtin.debug.debug: var=kubeadm_join
+  ansible.builtin.debug:
+    msg: "{{ kubeadm_join | default('Join command is not defined') }}"
 
 - name: 50) Store join command on the master for future use
-  action: copy content="{{ kubeadm_join }}" dest="/etc/kubernetes/kubeadm-join.command"
+  ansible.builtin.copy:
+    content: "{{ kubeadm_join }}"
+    dest: "/etc/kubernetes/kubeadm-join.command"
+    mode: '0600'  # this sets the permissions to only be readable by the owner.

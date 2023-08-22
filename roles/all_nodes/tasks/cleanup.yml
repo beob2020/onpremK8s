@@ -11,11 +11,7 @@
   register: result
   failed_when: false
 
-- name: check result
-  ansible.builtin.debug:
-    var: result.changed
-
-- name: Clean up Kubernetes Setup
+- name: Remove all Kubernetes running containers
   become: true
   ansible.builtin.shell: |
     set -o pipefail && kubeadm reset --force --cri-socket=unix:///var/run/cri-dockerd.sock
@@ -30,6 +26,7 @@
     state: absent
     purge: true
 
+# This is optional, but recommended if you want to reset the iptables rules too
 - name: Purge all docker packages
   ansible.builtin.apt:
     name:
@@ -40,6 +37,7 @@
     purge: true
     autoremove: true
 
+# Clean up folders and files that were created by kubeadm init and kubeadm join
 - name: Remove generated files and directories
   become: true
   ansible.builtin.file:
@@ -47,18 +45,13 @@
     state: absent
   loop:
     - cluster_initialized.txt
-    - snap
-    - /etc/kubernetes
-    - /etc/containerd
     - /etc/cni/net.d
-    - /var/lib/containerd
     - /var/lib/docker
     - /var/lib/etcd
     - /var/lib/cni
     - /var/run/docker.sock
     - /var/run/docker.sock
-    - /var/run/containerd
-    - /run/containerd
+    - /var/lib/kubelet/
     - /etc/sysctl.d/kubernetes.conf
     - /etc/docker
     - /usr/local/bin/cri-dockerd
@@ -67,43 +60,29 @@
     - /etc/systemd/system/kubelet.service.d
     - /etc/systemd/system/cri-docker.service
     - /etc/systemd/system/cri-docker.socket
-    - /etc/systemd/system/containerd.service.d
     - /usr/lib/systemd/system/cri-docker.service
     - /etc/systemd/system/multi-user.target.wants/cri-docker.service
+    - /etc/kubernetes/
     - /root/.kube
     - /opt/cni
     - /var/lib/cni/
-    - /var/lib/cni/*
     - /var/etc/cni/
     - /etc/cni/net.d/
-    - /usr/local/lib/systemd/system/containerd.service
     - /etc/apparmor.d/docker
     - /etc/apt/keyrings/kubernetes-apt-keyring.gpg
     - /etc/apt/sources.list.d/kubernetes.list
-    - /root/cri-dockerd
     - /etc/apt/keyrings/kubernetes-apt-keyring.gpg
-    - /etc/apt/sources.list.d/apt_kubernetes_io.list
-  failed_when: false
-
-- name: Bring cni0 interface down
-  become: true
-  ansible.builtin.command: ip link delete cni0
-  failed_when: false  # Use this if you want to continue even if an error occurs
-
-- name: Bring flannel.1 interface down
-  become: true
-  ansible.builtin.command: ip link delete flannel.1
-  failed_when: false
-
-- name: Bring docker0 interface down
-  become: true
-  ansible.builtin.command: ip link delete docker0
   failed_when: false
 
 - name: Do apt update
   become: true
   ansible.builtin.apt:
     update_cache: true
+
+- name: Bring docker0 interface down
+  become: true
+  ansible.builtin.command: ip link delete docker0
+  failed_when: false
 
 - name: Upgrade all packages to the latest version
   ansible.builtin.apt:

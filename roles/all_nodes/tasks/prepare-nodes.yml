@@ -16,7 +16,7 @@
 
 # Set Authorized Key taken from the host
 - name: 3) Set authorized key took from the host
-  authorized_key:
+  ansible.posix.authorized_key:
     user: admin
     key: "{{ lookup('file', '~/.ssh/id_rsa.pub') }}"
 
@@ -41,13 +41,9 @@
     name:
       - apt-transport-https
       - ca-certificates
-      - python3-pip
-      - python3-setuptools
       - curl
-      - golang-go
       - wget
       - lsb-release
-      - make
       - git
       - gnupg2
       - software-properties-common

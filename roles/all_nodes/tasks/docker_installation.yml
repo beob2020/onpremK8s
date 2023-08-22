@@ -16,11 +16,12 @@
     state: directory
     mode: '0755'
 
-- name: 23) Add Docker GPG key
-  ansible.builtin.shell:  |
+- name: 23)Add Docker GPG key
+  ansible.builtin.shell: |
      set -o pipefail &&
      curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /etc/apt/keyrings/docker.gpg
   args:
+    executable: /bin/bash
     creates: /etc/apt/keyrings/docker.gpg
   become: true
 
@@ -68,7 +69,7 @@
             }
     owner: root
     group: root
-    mode: '0644'
+    mode: '0755'
 
 - name: 28) Creating docker.conf file
   ansible.builtin.copy:
@@ -79,7 +80,7 @@
       ExecStart=/usr/bin/dockerd
     owner: root
     group: root
-    mode: '0644'
+    mode: '0755'
 
 - name: 29) Start and enable Docker Service
   become: true
@@ -95,7 +96,7 @@
   ansible.builtin.get_url:
     url: "https://github.com/Mirantis/cri-dockerd/releases/download/v{{ cri_docker_version }}/cri-dockerd_{{ cri_docker_version }}.3-0.debian-bullseye_amd64.deb"
     dest: "/tmp1/cri-dockerd-{{ cri_docker_version }}.3-0.debian-bullseye_amd64.deb"
-
+    mode: '0644'
 
 - name: 31) Extract the deb file
   ansible.builtin.command:
@@ -143,7 +144,6 @@
     name: cri-docker.service
     enabled: true
 
-
 - name: 37) Enable and start cri-docker.socket
   become: true
   ansible.builtin.systemd:
@@ -162,6 +162,12 @@
     owner: root
     group: root
     mode: '0644'
+
+- name: Restart Docker service
+  become: true
+  ansible.builtin.systemd:
+    name: docker
+    state: restarted
 
 - name: 39) Reload sysctl from all system configuration files
   ansible.builtin.command:

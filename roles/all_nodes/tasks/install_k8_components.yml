@@ -6,45 +6,45 @@
     owner: root
     group: root
     mode: '0755'
-  become: yes
+  become: true
 
-- name: 9)  Add Kubernetes APT key
+- name: 9)Add Kubernetes APT key
   ansible.builtin.shell: |
+     set -o pipefail &&
      curl -fsSL https://pkgs.k8s.io/core:/stable:/v1.28/deb/Release.key | sudo gpg --dearmor -o /etc/apt/keyrings/kubernetes-apt-keyring.gpg
   args:
+    executable: /bin/bash
     creates: /etc/apt/keyrings/kubernetes-apt-keyring.gpg
 
-- name: 10) Add Kubernetes GPG key
+- name: 10)Add Kubernetes GPG key
   ansible.builtin.apt_key:
     url: "https://packages.cloud.google.com/apt/doc/apt-key.gpg"
     state: present
 
-
-- name: 11) Add Kubernetes repository
-  ansible.builtin.shell: echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
+- name: 11)Add Kubernetes repository
+  ansible.builtin.shell: |
+     set -o pipefail &&
+     echo 'deb [signed-by=/etc/apt/keyrings/kubernetes-apt-keyring.gpg] https://pkgs.k8s.io/core:/stable:/v1.28/deb/ /' | sudo tee /etc/apt/sources.list.d/kubernetes.list
   args:
+    executable: /bin/bash
     creates: /etc/apt/sources.list.d/kubernetes.list
 
-
-- name: 12) Update APT cache
+- name: 12)Update APT cache
   become: true
   ansible.builtin.apt:
-    update_cache: yes
+    update_cache: true
 
-
-- name: 13) Install Kubernetes components
+- name: 13)Install Kubernetes components
   become: true
   ansible.builtin.apt:
     name:
-      - kubelet=1.28.0-1.1
-      - kubeadm=1.28.0-1.1
-      - kubectl=1.28.0-1.1
+      - kubelet={{ kubernetes_version }}
+      - kubeadm={{ kubernetes_version }}
+      - kubectl={{ kubernetes_version }}
     state: present
-    update_cache: yes
+    update_cache: true
 
-
-
-- name: 14) Hold Kubernetes packages to prevent unintentional upgrade
+- name: 14)Hold Kubernetes packages to prevent unintentional upgrade
   become: true
   ansible.builtin.dpkg_selections:
     name: "{{ item }}"
@@ -54,16 +54,12 @@
     - kubeadm
     - kubectl
 
-
-
-- name: 15) Turn off swap
+- name: 15)Turn off swap
   become: true
   ansible.builtin.command: "{{ item }}"
   with_items:
     - sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
     - swapoff -a
-
-
 
 - name: 16) Ensure required kernel modules are loaded
   become: true
@@ -76,20 +72,16 @@
     group: root
     mode: '0644'
 
-
- # Load necessary kernel modules
-- name: 17) Load necessary kernel modules
+- name: 17)Load necessary kernel modules
   become: true
-  modprobe:
+  community.general.modprobe:
     name: "{{ item }}"
     state: present
   loop:
     - overlay
     - br_netfilter
 
-
- # Ensure IPTables tooling does not use the nftables backend
-- name:  18) Ensure sysctl configuration is set for Kubernetes
+- name: 18)Ensure sysctl configuration is set for Kubernetes
   ansible.builtin.copy:
     dest: /etc/sysctl.d/kubernetes.conf
     content: |
@@ -98,11 +90,9 @@
       net.bridge.bridge-nf-call-ip6tables = 1
     mode: '0644'
 
-
 - name: 19) Check Kubelet args in Kubelet config
-  shell: grep "^Environment=\"KUBELET_EXTRA_ARGS=" /etc/systemd/system/kubelet.service.d/10-kubeadm.conf || true
+  ansible.builtin.shell: grep "^Environment=\"KUBELET_EXTRA_ARGS=" /etc/systemd/system/kubelet.service.d/10-kubeadm.conf || true
   register: check_args
-
 
 - name: 20) Restarting the System without a Reboot  - sysctl
   become: true

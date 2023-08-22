@@ -8,6 +8,7 @@
 - name: "Install master nodes"
   hosts: master
   become: true
+  become_user: root
   tasks:
     - name: Include tasks from role master-nodes
       ansible.builtin.include_tasks: ../tasks/master_nodes_install.yml

@@ -72,15 +72,6 @@
   delegate_to: localhost
   when: kubernetes_join_command is defined and kubernetes_join_command.stdout is defined
 
-- name: 42d) Copy Kubernetes admin config to local machine
-  become: true
-  ansible.builtin.copy:
-    src: /etc/kubernetes/admin.conf
-    dest: "/tmp/k8s-cluster-setup/config"
-    owner: admin
-    mode: '0644'
-    remote_src: true
-
 - name: 47) Save the join command on local machine
   ansible.builtin.copy:
     content: "{{ join_command.stdout }}"
